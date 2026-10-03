@@ -111,6 +111,33 @@ RSpec.describe 'Platform Accounts API', type: :request do
         expect(json_response.size).to eq(2)
         expect(json_response.map { |acc| acc['name'] }).to include('Account A', 'Account B')
       end
+
+      it 'removes the permission when the account is destroyed and the index keeps returning 200' do
+        account1.destroy!
+
+        expect(PlatformAppPermissible.where(permissible_type: 'Account', permissible_id: account1.id).count).to eq(0)
+        expect(PlatformAppPermissible.where(permissible_type: 'Account', permissible_id: account2.id).count).to eq(1)
+
+        get '/platform/api/v1/accounts', headers: { api_access_token: platform_app.access_token.token }, as: :json
+
+        expect(response).to have_http_status(:success)
+        json_response = response.parsed_body
+        expect(json_response.size).to eq(1)
+        expect(json_response.first['name']).to eq('Account B')
+      end
+
+      it 'returns 200 and skips orphaned permissibles when an account has been deleted outside the callbacks' do
+        # Use delete (not destroy!) to bypass dependent: :destroy callbacks so the
+        # permissible row survives — exactly the pre-existing orphan scenario.
+        account1.delete
+
+        get '/platform/api/v1/accounts', headers: { api_access_token: platform_app.access_token.token }, as: :json
+
+        expect(response).to have_http_status(:success)
+        json_response = response.parsed_body
+        expect(json_response.size).to eq(1)
+        expect(json_response.first['name']).to eq('Account B')
+      end
     end
   end
 

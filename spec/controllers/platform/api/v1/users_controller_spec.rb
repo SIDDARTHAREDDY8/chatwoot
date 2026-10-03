@@ -263,6 +263,13 @@ RSpec.describe 'Platform Users API', type: :request do
                headers: { api_access_token: platform_app.access_token.token }, as: :json
         expect(response).to have_http_status(:success)
       end
+
+      it 'destroys the platform app permission when the user is deleted via the deletion job' do
+        create(:platform_app_permissible, platform_app: platform_app, permissible: user)
+
+        expect { DeleteObjectJob.perform_now(user) }.to change(PlatformAppPermissible, :count).by(-1)
+        expect(PlatformAppPermissible.where(permissible_type: 'User', permissible_id: user.id).count).to eq(0)
+      end
     end
   end
 end

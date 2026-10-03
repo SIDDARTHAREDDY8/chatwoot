@@ -20,6 +20,18 @@ RSpec.describe User do
     it { is_expected.to have_many(:messages) }
     it { is_expected.to have_many(:reporting_events) }
     it { is_expected.to have_many(:teams) }
+    it { is_expected.to have_many(:platform_app_permissibles).dependent(:destroy) }
+  end
+
+  context 'when a user is deleted' do
+    let(:user) { create(:user) }
+
+    it 'destroys associated platform_app_permissibles' do
+      platform_app = create(:platform_app)
+      create(:platform_app_permissible, platform_app: platform_app, permissible: user)
+
+      expect { user.destroy! }.to change(PlatformAppPermissible, :count).by(-1)
+    end
   end
 
   describe 'concerns' do
